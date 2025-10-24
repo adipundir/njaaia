@@ -9,8 +9,15 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@envio-dev/hypersync-client": "^0.6.6",
+    "@langchain/community": "^1.0.0",
+    "@langchain/core": "^1.0.1",
+    "@langchain/openai": "^1.0.0",
     "@types/three": "^0.180.0",
+    "dotenv": "^17.2.3",
+    "envio": "^2.31.0",
     "framer-motion": "^12.23.24",
+    "langchain": "^1.0.1",
     "lucide-react": "^0.548.0",
     "next": "16.0.0",
     "react": "19.2.0",
