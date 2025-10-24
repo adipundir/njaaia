@@ -1,64 +1,113 @@
-import Image from "next/image";
+'use client';
+
+import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import AnimatedBackground from './components/AnimatedBackground';
+import WaveformAnimation from './components/WaveformAnimation';
+import MicrophoneButton from './components/MicrophoneButton';
+import StatusText from './components/StatusText';
+import { ShaderAnimation } from './components/shader-animation';
+
+type VoiceState = 'idle' | 'listening' | 'thinking' | 'speaking';
 
 export default function Home() {
+  const [voiceState, setVoiceState] = useState<VoiceState>('idle');
+  const [isActive, setIsActive] = useState(false);
+
+  const handleMicrophoneClick = () => {
+    if (voiceState === 'idle') {
+      setVoiceState('listening');
+      setIsActive(true);
+      
+      // Simulate listening for 2 seconds
+      setTimeout(() => {
+        setVoiceState('thinking');
+        setIsActive(false);
+        
+        // Simulate thinking for 1.5 seconds
+        setTimeout(() => {
+          setVoiceState('speaking');
+          setIsActive(true);
+          
+          // Simulate speaking for 2.5 seconds
+          setTimeout(() => {
+            setVoiceState('idle');
+            setIsActive(false);
+          }, 2500);
+        }, 1500);
+      }, 2000);
+    } else if (voiceState === 'listening') {
+      // Stop listening
+      setVoiceState('idle');
+      setIsActive(false);
+    }
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
+    <div className="relative min-h-screen overflow-hidden">
+      <AnimatedBackground />
+      
+      {/* Shader Animation - only show when thinking or speaking */}
+      {(voiceState === 'thinking' || voiceState === 'speaking') && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.3 }}
+          className="absolute inset-0 z-5"
+        >
+          <ShaderAnimation />
+        </motion.div>
+      )}
+      
+      <main className="relative z-10 flex min-h-screen flex-col items-center justify-center px-4">
+        {/* Status Text */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, ease: "easeOut" }}
+          className="mb-8"
+        >
+          <StatusText 
+            status={voiceState} 
+            message={voiceState === 'speaking' ? 'Hello! How can I help you today?' : undefined}
+          />
+        </motion.div>
+
+        {/* Waveform Animation */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
+          className="mb-12"
+        >
+          <WaveformAnimation isActive={isActive} />
+        </motion.div>
+
+        {/* Microphone Button */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.4, ease: "easeOut" }}
+        >
+          <MicrophoneButton
+            isListening={voiceState === 'listening'}
+            onClick={handleMicrophoneClick}
+            disabled={voiceState === 'thinking' || voiceState === 'speaking'}
+          />
+        </motion.div>
+
+        {/* Brand name */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 0.6 }}
+          transition={{ duration: 1, delay: 1 }}
+          className="absolute bottom-8 text-center"
+        >
+          <h1 className="text-4xl font-light tracking-wider text-white/60">
+            njaaia
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
+        </motion.div>
       </main>
     </div>
   );
