@@ -27,7 +27,7 @@ A sleek, futuristic voice-based AI assistant powered by LangChain and Envio's bl
 ### Prerequisites
 - Node.js 18+ 
 - npm or yarn
-- OpenAI API key
+- Google Gemini API key (recommended) or OpenAI API key
 - Modern browser with speech recognition support
 
 ### Installation
@@ -50,7 +50,13 @@ A sleek, futuristic voice-based AI assistant powered by LangChain and Envio's bl
    
    Edit `.env.local` and add your API keys:
    ```env
+   # Primary AI provider (recommended)
+   GEMINI_API_KEY=your_gemini_api_key_here
+   
+   # Alternative AI provider (fallback)
    OPENAI_API_KEY=your_openai_api_key_here
+   
+   # Envio configuration
    ENVIO_HYPERSYNC_URL=https://api.hypersync.xyz
    ```
 
@@ -87,8 +93,8 @@ A sleek, futuristic voice-based AI assistant powered by LangChain and Envio's bl
 - **Three.js**: WebGL shader animations
 
 ### Backend
-- **LangChain**: AI agent framework
-- **OpenAI GPT-4**: Large language model
+- **Google Gemini**: Primary AI model (gemini-1.5-flash)
+- **OpenAI GPT-4**: Fallback AI model
 - **Envio HyperSync**: Blockchain data access
 - **Web Speech API**: Voice recognition
 
@@ -129,11 +135,14 @@ njaaia/
 
 | Variable | Description | Required |
 |----------|-------------|----------|
-| `OPENAI_API_KEY` | OpenAI API key for GPT-4 | Yes |
+| `GEMINI_API_KEY` | Google Gemini API key (recommended) | Yes* |
+| `OPENAI_API_KEY` | OpenAI API key for GPT-4 (fallback) | Yes* |
 | `ENVIO_HYPERSYNC_URL` | Envio HyperSync endpoint | No (has default) |
 | `ETHEREUM_HYPERSYNC_URL` | Ethereum-specific endpoint | No |
 | `POLYGON_HYPERSYNC_URL` | Polygon-specific endpoint | No |
 | `ARBITRUM_HYPERSYNC_URL` | Arbitrum-specific endpoint | No |
+
+*At least one AI API key is required (Gemini preferred)
 
 ### Customization
 

@@ -1,7 +1,8 @@
 // Environment configuration for njaaia
 export const env = {
-  // OpenAI Configuration
+  // AI Model Configuration
   OPENAI_API_KEY: process.env.OPENAI_API_KEY || '',
+  GEMINI_API_KEY: process.env.GEMINI_API_KEY || '',
   
   // Envio Configuration
   ENVIO_HYPERSYNC_URL: process.env.ENVIO_HYPERSYNC_URL || 'https://api.hypersync.xyz',
@@ -18,11 +19,18 @@ export const env = {
   
   // Validation
   isConfigured: () => {
-    return !!env.OPENAI_API_KEY;
+    return !!(env.OPENAI_API_KEY || env.GEMINI_API_KEY);
+  },
+  
+  // Get preferred AI provider
+  getAIProvider: () => {
+    if (env.GEMINI_API_KEY) return 'gemini';
+    if (env.OPENAI_API_KEY) return 'openai';
+    return null;
   }
 };
 
 // Environment validation
 if (typeof window === 'undefined' && !env.isConfigured()) {
-  console.warn('⚠️  OpenAI API key not configured. Please set OPENAI_API_KEY in your environment variables.');
+  console.warn('⚠️  AI API key not configured. Please set GEMINI_API_KEY or OPENAI_API_KEY in your environment variables.');
 }

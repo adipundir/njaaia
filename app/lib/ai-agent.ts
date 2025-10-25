@@ -1,3 +1,4 @@
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { env } from '../config/env';
 
 // Function to check if the input requires blockchain data tools
@@ -13,6 +14,15 @@ export function requiresBlockchainData(input: string): boolean {
   return blockchainKeywords.some(keyword => lowerInput.includes(keyword));
 }
 
+// Initialize Gemini AI
+const getGeminiModel = () => {
+  if (!env.GEMINI_API_KEY) {
+    throw new Error('Gemini API key not configured');
+  }
+  const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
+  return genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+};
+
 // Function to process user input and get AI response
 export async function processUserInput(input: string): Promise<{
   response: string;
@@ -22,55 +32,83 @@ export async function processUserInput(input: string): Promise<{
   try {
     if (!env.isConfigured()) {
       return {
-        response: "I'm sorry, but I'm not properly configured yet. Please check that the OpenAI API key is set up correctly.",
+        response: "I'm sorry, but I'm not properly configured yet. Please check that the AI API key is set up correctly.",
         error: 'Configuration error'
       };
     }
 
-    // Simple OpenAI API call
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${env.OPENAI_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4',
-        messages: [
-          {
-            role: 'system',
-            content: `You are njaaia, a sophisticated AI assistant specialized in blockchain and Web3 data analysis. 
-            
-            Your capabilities include:
-            - Analyzing blockchain data and transactions
-            - Explaining DeFi protocols and concepts
-            - Providing insights about Web3 ecosystems
-            - Answering questions about cryptocurrency and blockchain technology
-            
-            Be conversational, helpful, and focus on making complex blockchain concepts accessible to everyone.
-            If you don't have specific real-time data, explain what you can help with instead.`
-          },
-          {
-            role: 'user',
-            content: input
-          }
-        ],
-        temperature: 0.1,
-        max_tokens: 1000,
-      }),
-    });
+    const provider = env.getAIProvider();
+    
+    if (provider === 'gemini') {
+      // Use Gemini API
+      const model = getGeminiModel();
+      const prompt = `You are njaaia, a sophisticated AI assistant specialized in blockchain and Web3 data analysis. 
+      
+      Your capabilities include:
+      - Analyzing blockchain data and transactions
+      - Explaining DeFi protocols and concepts
+      - Providing insights about Web3 ecosystems
+      - Answering questions about cryptocurrency and blockchain technology
+      
+      Be conversational, helpful, and focus on making complex blockchain concepts accessible to everyone.
+      If you don't have specific real-time data, explain what you can help with instead.
+      
+      User question: ${input}`;
 
-    if (!response.ok) {
-      throw new Error(`OpenAI API error: ${response.status}`);
+      const result = await model.generateContent(prompt);
+      const response = await result.response;
+      const aiResponse = response.text();
+
+      return {
+        response: aiResponse,
+        intermediateSteps: []
+      };
+    } else {
+      // Fallback to OpenAI
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${env.OPENAI_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4',
+          messages: [
+            {
+              role: 'system',
+              content: `You are njaaia, a sophisticated AI assistant specialized in blockchain and Web3 data analysis. 
+              
+              Your capabilities include:
+              - Analyzing blockchain data and transactions
+              - Explaining DeFi protocols and concepts
+              - Providing insights about Web3 ecosystems
+              - Answering questions about cryptocurrency and blockchain technology
+              
+              Be conversational, helpful, and focus on making complex blockchain concepts accessible to everyone.
+              If you don't have specific real-time data, explain what you can help with instead.`
+            },
+            {
+              role: 'user',
+              content: input
+            }
+          ],
+          temperature: 0.1,
+          max_tokens: 1000,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`OpenAI API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const aiResponse = data.choices[0]?.message?.content || 'Sorry, I could not generate a response.';
+
+      return {
+        response: aiResponse,
+        intermediateSteps: []
+      };
     }
-
-    const data = await response.json();
-    const aiResponse = data.choices[0]?.message?.content || 'Sorry, I could not generate a response.';
-
-    return {
-      response: aiResponse,
-      intermediateSteps: []
-    };
   } catch (error) {
     console.error('Error processing user input:', error);
     return {
@@ -84,34 +122,45 @@ export async function processUserInput(input: string): Promise<{
 export async function getQuickResponse(input: string): Promise<string> {
   try {
     if (!env.isConfigured()) {
-      return "I'm sorry, but I'm not properly configured yet. Please check that the OpenAI API key is set up correctly.";
+      return "I'm sorry, but I'm not properly configured yet. Please check that the AI API key is set up correctly.";
     }
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${env.OPENAI_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4',
-        messages: [
-          {
-            role: 'user',
-            content: input
-          }
-        ],
-        temperature: 0.1,
-        max_tokens: 500,
-      }),
-    });
+    const provider = env.getAIProvider();
+    
+    if (provider === 'gemini') {
+      // Use Gemini API
+      const model = getGeminiModel();
+      const result = await model.generateContent(input);
+      const response = await result.response;
+      return response.text();
+    } else {
+      // Fallback to OpenAI
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${env.OPENAI_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4',
+          messages: [
+            {
+              role: 'user',
+              content: input
+            }
+          ],
+          temperature: 0.1,
+          max_tokens: 500,
+        }),
+      });
 
-    if (!response.ok) {
-      throw new Error(`OpenAI API error: ${response.status}`);
+      if (!response.ok) {
+        throw new Error(`OpenAI API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data.choices[0]?.message?.content || 'Sorry, I could not generate a response.';
     }
-
-    const data = await response.json();
-    return data.choices[0]?.message?.content || 'Sorry, I could not generate a response.';
   } catch (error) {
     console.error('Error getting quick response:', error);
     return "I encountered an error while processing your request. Please try again.";
@@ -122,75 +171,105 @@ export async function getQuickResponse(input: string): Promise<string> {
 export async function* getStreamingResponse(input: string): AsyncGenerator<string, void, unknown> {
   try {
     if (!env.isConfigured()) {
-      yield "I'm sorry, but I'm not properly configured yet. Please check that the OpenAI API key is set up correctly.";
+      yield "I'm sorry, but I'm not properly configured yet. Please check that the AI API key is set up correctly.";
       return;
     }
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${env.OPENAI_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4',
-        messages: [
-          {
-            role: 'system',
-            content: `You are njaaia, a sophisticated AI assistant specialized in blockchain and Web3 data analysis. 
-            
-            Your capabilities include:
-            - Analyzing blockchain data and transactions
-            - Explaining DeFi protocols and concepts
-            - Providing insights about Web3 ecosystems
-            - Answering questions about cryptocurrency and blockchain technology
-            
-            Be conversational, helpful, and focus on making complex blockchain concepts accessible to everyone.`
-          },
-          {
-            role: 'user',
-            content: input
-          }
-        ],
-        temperature: 0.1,
-        max_tokens: 1000,
-        stream: true,
-      }),
-    });
+    const provider = env.getAIProvider();
+    
+    if (provider === 'gemini') {
+      // Gemini doesn't support streaming in the same way, so we'll simulate it
+      const model = getGeminiModel();
+      const prompt = `You are njaaia, a sophisticated AI assistant specialized in blockchain and Web3 data analysis. 
+      
+      Your capabilities include:
+      - Analyzing blockchain data and transactions
+      - Explaining DeFi protocols and concepts
+      - Providing insights about Web3 ecosystems
+      - Answering questions about cryptocurrency and blockchain technology
+      
+      Be conversational, helpful, and focus on making complex blockchain concepts accessible to everyone.
+      
+      User question: ${input}`;
 
-    if (!response.ok) {
-      throw new Error(`OpenAI API error: ${response.status}`);
-    }
-
-    const reader = response.body?.getReader();
-    if (!reader) {
-      throw new Error('No response body');
-    }
-
-    const decoder = new TextDecoder();
-    let buffer = '';
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split('\n');
-      buffer = lines.pop() || '';
-
-      for (const line of lines) {
-        if (line.startsWith('data: ')) {
-          const data = line.slice(6);
-          if (data === '[DONE]') return;
-
-          try {
-            const parsed = JSON.parse(data);
-            const content = parsed.choices[0]?.delta?.content;
-            if (content) {
-              yield content;
+      const result = await model.generateContent(prompt);
+      const response = await result.response;
+      const text = response.text();
+      
+      // Simulate streaming by yielding words with delay
+      const words = text.split(' ');
+      for (const word of words) {
+        yield word + ' ';
+        await new Promise(resolve => setTimeout(resolve, 50)); // Small delay for streaming effect
+      }
+    } else {
+      // Fallback to OpenAI streaming
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${env.OPENAI_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4',
+          messages: [
+            {
+              role: 'system',
+              content: `You are njaaia, a sophisticated AI assistant specialized in blockchain and Web3 data analysis. 
+              
+              Your capabilities include:
+              - Analyzing blockchain data and transactions
+              - Explaining DeFi protocols and concepts
+              - Providing insights about Web3 ecosystems
+              - Answering questions about cryptocurrency and blockchain technology
+              
+              Be conversational, helpful, and focus on making complex blockchain concepts accessible to everyone.`
+            },
+            {
+              role: 'user',
+              content: input
             }
-          } catch (e) {
-            // Ignore parsing errors for incomplete chunks
+          ],
+          temperature: 0.1,
+          max_tokens: 1000,
+          stream: true,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`OpenAI API error: ${response.status}`);
+      }
+
+      const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error('No response body');
+      }
+
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6);
+            if (data === '[DONE]') return;
+
+            try {
+              const parsed = JSON.parse(data);
+              const content = parsed.choices[0]?.delta?.content;
+              if (content) {
+                yield content;
+              }
+            } catch (e) {
+              // Ignore parsing errors for incomplete chunks
+            }
           }
         }
       }
